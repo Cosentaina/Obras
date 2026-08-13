@@ -1,171 +1,172 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
-  <title>ObraVoz</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <style>
-    *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
-    header{background:#111827;color:white;padding:18px 16px;position:sticky;top:0;z-index:2}
-    header h1{margin:0;font-size:22px}.wrap{max-width:720px;margin:auto;padding:16px}
-    button,input,textarea{font:inherit}button{border:0;border-radius:12px;padding:13px 16px;cursor:pointer}
-    .primary{background:#111827;color:white;width:100%;font-size:17px}.voice{background:#16a34a;color:white;width:100%;font-size:18px;margin:10px 0}
-    .danger{background:#fee2e2;color:#991b1b}.secondary{background:#e5e7eb}
-    .card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #0000000d}
-    .row{display:flex;gap:8px}.row>*{flex:1}.hidden{display:none}
-    input,textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:12px;background:white}
-    textarea{min-height:130px;resize:vertical}.muted{color:#6b7280;font-size:14px}
-    .obra{display:flex;justify-content:space-between;align-items:center;gap:10px}.obra h3{margin:0 0 4px}
-    .visit{border-left:4px solid #111827;padding-left:12px;margin-top:14px}.visit b{display:block;margin-top:7px}
-    .small{font-size:13px}.topgap{margin-top:12px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>ObraVoz v3</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f4f6;color:#111827;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:#111827;color:#fff;padding:18px 16px}.wrap{max-width:720px;margin:auto;padding:16px}
+h1,h2,h3{margin-top:0}.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #0001}
+button,input,textarea{font:inherit}button{border:0;border-radius:12px;padding:14px 16px}
+.primary{background:#111827;color:#fff;width:100%;font-size:17px}.secondary{background:#e5e7eb}.record{background:#dc2626;color:#fff;width:100%;font-size:20px}
+.row{display:flex;gap:8px}.row>*{flex:1}input,textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px}
+textarea{min-height:150px}.muted{color:#6b7280;font-size:14px}.hidden{display:none}.status{text-align:center;font-weight:600;margin:10px 0}
+.obra{display:flex;justify-content:space-between;align-items:center}.visit{border-left:4px solid #111827;padding-left:12px;margin-top:12px}.visit b{display:block;margin-top:8px}
+.detect{padding:12px;background:#f9fafb;border-radius:10px;margin-top:8px}
+</style>
 </head>
 <body>
 <header><div class="wrap"><h1>🏗️ ObraVoz</h1></div></header>
 <main class="wrap">
-  <section id="home">
-    <button class="primary" onclick="showNewVisit()">🎙️ Nueva visita</button>
-    <div class="card">
-      <div class="row"><input id="search" placeholder="Buscar obra..." oninput="renderObras()"><button class="secondary" onclick="newObra()">+ Obra</button></div>
-    </div>
-    <div id="obras"></div>
-  </section>
+<section id="home">
+<button class="primary" onclick="newVisit()">🎙️ Nueva visita</button>
+<div class="card row"><input id="search" placeholder="Buscar obra..." oninput="render()"><button class="secondary" onclick="addObra()">+ Obra</button></div>
+<div id="obras"></div>
+</section>
 
-  <section id="visit" class="hidden">
-    <div class="card">
-      <h2>Nueva visita</h2>
-      <p class="muted">Pulsa el micrófono y habla con normalidad. Empieza diciendo el nombre de la obra.</p>
-      <button class="voice" id="mic" onclick="toggleVoice()">🎙️ Empezar a dictar</button>
-      <textarea id="texto" oninput="detectObra(this.value)" placeholder="Aquí aparecerá lo que dictes..."></textarea>
-      <div class="topgap"><label class="small">Obra detectada</label>
-<div id="obraDetectada" class="card" style="margin:6px 0;background:#f9fafb">Todavía no hay dictado.</div>
-<input type="hidden" id="obraSelect"></div>
-      <div class="muted topgap">La primera versión separa automáticamente frases que indiquen trabajo, material usado, material pendiente y próxima visita. El dictado completo también queda guardado.</div>
-      <div class="row topgap"><button class="primary" onclick="saveVisit()">Guardar visita</button><button class="secondary" onclick="goHome()">Cancelar</button></div>
-    </div>
-  </section>
+<section id="visit" class="hidden">
+<div class="card">
+<h2>Nueva visita</h2>
+<p class="muted">Habla de corrido. No intentamos interpretar mientras hablas: primero grabamos/transcribimos y después ordenamos la información.</p>
+<button id="rec" class="record" onclick="toggleRecord()">🎙️ Empezar a dictar</button>
+<div id="status" class="status">Listo</div>
+<textarea id="text" placeholder="La transcripción aparecerá aquí. Puedes corregirla antes de guardar."></textarea>
+<div class="detect"><strong>Obra detectada:</strong> <span id="detected">—</span></div>
+<div class="card" id="preview" style="background:#f9fafb">
+<strong>Vista previa</strong>
+<div id="previewText" class="muted">Cuando termines de dictar aparecerán aquí los campos detectados.</div>
+</div>
+<div class="row"><button class="primary" onclick="save()">Guardar visita</button><button class="secondary" onclick="home()">Cancelar</button></div>
+</div>
+</section>
 
-  <section id="detail" class="hidden">
-    <button class="secondary" onclick="goHome()">← Obras</button>
-    <div id="detailContent"></div>
-  </section>
+<section id="detail" class="hidden">
+<button class="secondary" onclick="home()">← Obras</button>
+<div id="detailBox"></div>
+</section>
 </main>
-<script>
-const KEY='obravoz-v1';
-let db=JSON.parse(localStorage.getItem(KEY)||'{"obras":[]}');
-let recognition=null, listening=false;
 
-function saveDB(){localStorage.setItem(KEY,JSON.stringify(db));}
-function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
-function show(id){['home','visit','detail'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));}
-function goHome(){show('home');renderObras();}
-function newObra(){
-  const n=prompt('Nombre de la obra:');
-  if(!n?.trim()) return;
-  if(!db.obras.some(o=>o.nombre.toLowerCase()===n.trim().toLowerCase()))
-    db.obras.push({id:crypto.randomUUID(),nombre:n.trim(),visitas:[]});
-  saveDB(); renderObras();
-}
-function renderObras(){
-  const q=(document.getElementById('search').value||'').toLowerCase();
-  const arr=db.obras.filter(o=>o.nombre.toLowerCase().includes(q));
-  document.getElementById('obras').innerHTML=arr.length?arr.map(o=>`
-    <div class="card obra" onclick="openObra('${o.id}')"><div><h3>${esc(o.nombre)}</h3><div class="muted">${o.visitas.length} visita${o.visitas.length===1?'':'s'}</div></div><div>›</div></div>`).join('')
-    : '<div class="card muted">No hay obras todavía. Pulsa “+ Obra” para crear la primera.</div>';
-}
-function populateSelect(){
-  document.getElementById('obraSelect').value='';
-  document.getElementById('obraDetectada').textContent='Habla diciendo primero el nombre de la obra.';
+<script>
+const KEY='obravoz-v3';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"obras":[]}');
+let mediaRecorder=null, chunks=[], recording=false, recognition=null, speechSupported=false, interim='';
+const $=id=>document.getElementById(id);
+
+function persist(){localStorage.setItem(KEY,JSON.stringify(db))}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function show(id){['home','visit','detail'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function home(){show('home');render()}
+function addObra(){const n=prompt('Nombre de la obra:');if(!n?.trim())return;if(!db.obras.some(o=>o.nombre.toLowerCase()===n.trim().toLowerCase()))db.obras.push({id:crypto.randomUUID(),nombre:n.trim(),visitas:[]});persist();render()}
+function render(){
+ const q=($('search').value||'').toLowerCase();
+ const a=db.obras.filter(o=>o.nombre.toLowerCase().includes(q));
+ $('obras').innerHTML=a.length?a.map(o=>`<div class="card obra" onclick="openObra('${o.id}')"><div><h3>${esc(o.nombre)}</h3><span class="muted">${o.visitas.length} visita${o.visitas.length===1?'':'s'}</span></div><span>›</span></div>`).join(''):'<div class="card muted">No hay obras.</div>';
 }
 function detectObra(text){
-  const t=text.toLowerCase();
-  let best=null, score=0;
-  for(const o of db.obras){
-    const name=o.nombre.toLowerCase().trim();
-    if(!name) continue;
-    let sc=t.includes(name)?100:0;
-    const words=name.split(/\\s+/).filter(w=>w.length>2);
-    sc += words.filter(w=>t.includes(w)).length*10;
-    if(sc>score){score=sc;best=o;}
-  }
-  if(best && score>=10){
-    document.getElementById('obraSelect').value=best.id;
-    document.getElementById('obraDetectada').innerHTML='🏗️ <strong>'+esc(best.nombre)+'</strong>';
-  } else {
-    document.getElementById('obraSelect').value='';
-    document.getElementById('obraDetectada').textContent='No he encontrado una obra. Di el nombre exacto al principio.';
-  }
-  return best;
+ let best=null,bestScore=0,t=text.toLowerCase();
+ for(const o of db.obras){
+   const n=o.nombre.toLowerCase().trim();
+   if(!n)continue;
+   let score=t.includes(n)?100:0;
+   const words=n.split(/\s+/).filter(w=>w.length>2);
+   score+=words.filter(w=>t.includes(w)).length*12;
+   if(score>bestScore){bestScore=score;best=o}
+ }
+ $('detected').textContent=best?best.nombre:'No detectada';
+ updatePreview(text,best);
+ return best;
 }
-function showNewVisit(){
-  if(!db.obras.length){alert('Primero crea una obra.');newObra();if(!db.obras.length)return;}
-  populateSelect();document.getElementById('texto').value='';show('visit');
+function extract(text){
+ const t=text.replace(/\s+/g,' ').trim();
+ const grab=(arr)=>{
+   for(const p of arr){const m=t.match(new RegExp(p+'\\s*[:\\-]?\\s*([^\\.]+)','i'));if(m)return m[1].trim()}
+   return '';
+ };
+ return {
+  trabajo:grab(['trabajo realizado','trabajo','hemos hecho','he hecho','hemos terminado','he terminado','hemos instalado','he instalado']),
+  usado:grab(['material usado','material utilizado','he usado','hemos usado','he gastado','hemos gastado']),
+  pendiente:grab(['material pendiente','hay que traer','tengo que traer','falta','faltan','pendiente','me falta','nos falta']),
+  proxima:grab(['próxima visita','proxima visita','volver','volvemos','tengo que volver','hay que volver'])
+ };
 }
-function toggleVoice(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert('Este navegador no permite reconocimiento de voz. Prueba Chrome en Android.');return;}
-  if(listening){recognition.stop();return;}
-  recognition=new SR();recognition.lang='es-ES';recognition.continuous=true;recognition.interimResults=true;
-  let base=document.getElementById('texto').value.trim();
-  recognition.onresult=e=>{
-    let final='', interim='';
-    for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t+' ';else interim+=t;}
-    document.getElementById('texto').value=(base?base+' ':'')+final+interim;
-    base=document.getElementById('texto').value.replace(interim,'').trim();
-    detectObra(document.getElementById('texto').value);
-  };
-  recognition.onstart=()=>{listening=true;document.getElementById('mic').textContent='⏹️ Parar de dictar';};
-  recognition.onend=()=>{listening=false;document.getElementById('mic').textContent='🎙️ Empezar a dictar';};
-  recognition.start();
+function updatePreview(text,best){
+ const x=extract(text);
+ $('previewText').innerHTML=`${best?`<b>Obra:</b> ${esc(best.nombre)}<br>`:''}
+ ${x.trabajo?`<b>Trabajo:</b> ${esc(x.trabajo)}<br>`:''}
+ ${x.usado?`<b>Material usado:</b> ${esc(x.usado)}<br>`:''}
+ ${x.pendiente?`<b>Material pendiente:</b> ${esc(x.pendiente)}<br>`:''}
+ ${x.proxima?`<b>Próxima visita:</b> ${esc(x.proxima)}`:''}
+ ${(!x.trabajo&&!x.usado&&!x.pendiente&&!x.proxima)?'Se guardará también el dictado completo.':''}`;
 }
-function parse(text){
-  const clean=text.trim();
-  const date=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const find=(patterns)=>{
-    for(const p of patterns){
-      const m=clean.match(new RegExp(p+'\\s*[:\\-]?\\s*([^\\.\\n]+)','i'));
-      if(m)return m[1].trim();
-    }
-    return '';
-  };
-  // Reconocimiento práctico por frases habituales del trabajo en obra.
-  const trabajo=find(['trabajo realizado','trabajo','hemos hecho','he hecho','hemos terminado','he terminado','hemos instalado','he instalado']);
-  const usado=find(['material usado','material utilizado','he usado','hemos usado','he gastado','hemos gastado']);
-  const pendiente=find(['material pendiente','hay que traer','falta','faltan','pendiente','me falta','nos falta']);
-  const proxima=find(['próxima visita','proxima visita','volver','volvemos','tengo que volver','hay que volver']);
-  return {resumen:clean,trabajo,materialUsado:usado,pendiente,proxima};
+function newVisit(){
+ if(!db.obras.length){alert('Primero crea una obra.');addObra();if(!db.obras.length)return}
+ $('text').value='';$('detected').textContent='—';$('previewText').textContent='Cuando termines de dictar aparecerán aquí los campos detectados.';show('visit');
 }
-function saveVisit(){
-  const text=document.getElementById('texto').value.trim();
-  const detected=detectObra(text);
-  if(!text)return alert('Dicta o escribe algo antes de guardar.');
-  if(!detected)return alert('No he podido identificar la obra. Di el nombre de la obra al principio del dictado.');
-  detected.visitas.unshift({id:crypto.randomUUID(),fecha:new Date().toISOString(),...parse(text)});
-  saveDB();openObra(detected.id);
+function setupSpeech(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR)return null;
+ const r=new SR();r.lang='es-ES';r.continuous=true;r.interimResults=true;
+ r.onresult=e=>{
+   let final='';
+   for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript+' ';else interim=e.results[i][0].transcript}
+   const existing=$('text').value.replace(interim,'').trim();
+   $('text').value=(existing+' '+final+interim).trim();
+   detectObra($('text').value);
+ };
+ r.onerror=e=>{ $('status').textContent='Error de voz: '+e.error+'. Puedes escribir o probar Chrome.'; };
+ r.onend=()=>{if(recording && !mediaRecorder) return; if(recording){try{r.start()}catch(e){}}};
+ return r;
+}
+async function toggleRecord(){
+ if(recording){stopRecord();return}
+ recording=true;$('rec').textContent='⏹️ Parar';
+ $('status').textContent='Escuchando… habla de corrido';
+ // Prefer native browser speech recognition on Android Chrome; no external API and no API key.
+ recognition=setupSpeech();
+ if(recognition){try{recognition.start();speechSupported=true}catch(e){}}
+ try{
+   if(navigator.mediaDevices?.getUserMedia){
+     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+     mediaRecorder=new MediaRecorder(stream);chunks=[];
+     mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+     mediaRecorder.onstop=()=>stream.getTracks().forEach(t=>t.stop());
+     mediaRecorder.start();
+   }
+ }catch(e){ /* speech recognition can still work without MediaRecorder */ }
+}
+function stopRecord(){
+ recording=false;$('rec').textContent='🎙️ Empezar a dictar';$('status').textContent='Dictado terminado. Revisa la transcripción.';
+ if(recognition){try{recognition.stop()}catch(e){}}
+ if(mediaRecorder&&mediaRecorder.state!=='inactive')mediaRecorder.stop();
+ mediaRecorder=null;
+ detectObra($('text').value);
+}
+$('text').addEventListener('input',()=>detectObra($('text').value));
+
+function save(){
+ const text=$('text').value.trim();if(!text)return alert('No hay dictado.');
+ const o=detectObra(text);if(!o)return alert('No he encontrado la obra. Di el nombre de la obra al principio.');
+ const x=extract(text);
+ o.visitas.unshift({id:crypto.randomUUID(),fecha:new Date().toISOString(),resumen:text,trabajo:x.trabajo,materialUsado:x.usado,pendiente:x.pendiente,proxima:x.proxima});
+ persist();openObra(o.id);
 }
 function openObra(id){
-  const o=db.obras.find(x=>x.id===id);if(!o)return;
-  document.getElementById('detailContent').innerHTML=`
-    <div class="card"><h2>${esc(o.nombre)}</h2><div class="muted">${o.visitas.length} visita${o.visitas.length===1?'':'s'}</div></div>
-    ${o.visitas.map(v=>`<div class="card visit">
-      <div class="muted">${new Date(v.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>
-      ${v.trabajo?`<b>🔨 Trabajo</b><div>${esc(v.trabajo)}</div>`:''}
-      ${v.materialUsado?`<b>📦 Material usado</b><div>${esc(v.materialUsado)}</div>`:''}
-      ${v.pendiente?`<b>⚠️ Pendiente</b><div>${esc(v.pendiente)}</div>`:''}
-      ${v.proxima?`<b>📅 Próxima visita</b><div>${esc(v.proxima)}</div>`:''}
-      <b>📝 Dictado</b><div>${esc(v.resumen)}</div>
-    </div>`).join('') || '<div class="card muted">Todavía no hay visitas.</div>'}
-    <button class="danger" onclick="deleteObra('${o.id}')">Eliminar obra</button>`;
-  show('detail');
+ const o=db.obras.find(x=>x.id===id);if(!o)return;
+ $('detailBox').innerHTML=`<div class="card"><h2>${esc(o.nombre)}</h2><div class="muted">${o.visitas.length} visitas</div></div>`+
+ o.visitas.map(v=>`<div class="card visit"><div class="muted">${new Date(v.fecha).toLocaleDateString('es-ES')}</div>
+ ${v.trabajo?`<b>🔨 Trabajo</b>${esc(v.trabajo)}`:''}
+ ${v.materialUsado?`<b>📦 Material usado</b>${esc(v.materialUsado)}`:''}
+ ${v.pendiente?`<b>⚠️ Material pendiente</b>${esc(v.pendiente)}`:''}
+ ${v.proxima?`<b>📅 Próxima visita</b>${esc(v.proxima)}`:''}
+ <b>📝 Dictado</b>${esc(v.resumen)}</div>`).join('')+
+ `<button class="secondary" onclick="if(confirm('¿Eliminar esta obra y su historial?')){db.obras=db.obras.filter(x=>x.id!=='${o.id}');persist();home()}">Eliminar obra</button>`;
+ show('detail');
 }
-function deleteObra(id){
-  const o=db.obras.find(x=>x.id===id);if(confirm('¿Eliminar la obra y todo su historial?')){db.obras=db.obras.filter(x=>x.id!==id);saveDB();goHome();}
-}
-renderObras();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
