@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>ObraVoz</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
+    header{background:#111827;color:white;padding:18px 16px;position:sticky;top:0;z-index:2}
+    header h1{margin:0;font-size:22px}.wrap{max-width:720px;margin:auto;padding:16px}
+    button,input,textarea{font:inherit}button{border:0;border-radius:12px;padding:13px 16px;cursor:pointer}
+    .primary{background:#111827;color:white;width:100%;font-size:17px}.voice{background:#16a34a;color:white;width:100%;font-size:18px;margin:10px 0}
+    .danger{background:#fee2e2;color:#991b1b}.secondary{background:#e5e7eb}
+    .card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px #0000000d}
+    .row{display:flex;gap:8px}.row>*{flex:1}.hidden{display:none}
+    input,textarea{width:100%;border:1px solid #d1d5db;border-radius:10px;padding:12px;background:white}
+    textarea{min-height:130px;resize:vertical}.muted{color:#6b7280;font-size:14px}
+    .obra{display:flex;justify-content:space-between;align-items:center;gap:10px}.obra h3{margin:0 0 4px}
+    .visit{border-left:4px solid #111827;padding-left:12px;margin-top:14px}.visit b{display:block;margin-top:7px}
+    .small{font-size:13px}.topgap{margin-top:12px}
+  </style>
+</head>
+<body>
+<header><div class="wrap"><h1>🏗️ ObraVoz</h1></div></header>
+<main class="wrap">
+  <section id="home">
+    <button class="primary" onclick="showNewVisit()">🎙️ Nueva visita</button>
+    <div class="card">
+      <div class="row"><input id="search" placeholder="Buscar obra..." oninput="renderObras()"><button class="secondary" onclick="newObra()">+ Obra</button></div>
+    </div>
+    <div id="obras"></div>
+  </section>
+
+  <section id="visit" class="hidden">
+    <div class="card">
+      <h2>Nueva visita</h2>
+      <p class="muted">Pulsa el micrófono y habla con normalidad. Empieza diciendo el nombre de la obra.</p>
+      <button class="voice" id="mic" onclick="toggleVoice()">🎙️ Empezar a dictar</button>
+      <textarea id="texto" oninput="detectObra(this.value)" placeholder="Aquí aparecerá lo que dictes..."></textarea>
+      <div class="topgap"><label class="small">Obra detectada</label>
+<div id="obraDetectada" class="card" style="margin:6px 0;background:#f9fafb">Todavía no hay dictado.</div>
+<input type="hidden" id="obraSelect"></div>
+      <div class="muted topgap">La primera versión separa automáticamente frases que indiquen trabajo, material usado, material pendiente y próxima visita. El dictado completo también queda guardado.</div>
+      <div class="row topgap"><button class="primary" onclick="saveVisit()">Guardar visita</button><button class="secondary" onclick="goHome()">Cancelar</button></div>
+    </div>
+  </section>
+
+  <section id="detail" class="hidden">
+    <button class="secondary" onclick="goHome()">← Obras</button>
+    <div id="detailContent"></div>
+  </section>
+</main>
+<script>
+const KEY='obravoz-v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"obras":[]}');
+let recognition=null, listening=false;
+
+function saveDB(){localStorage.setItem(KEY,JSON.stringify(db));}
+function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function show(id){['home','visit','detail'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==id));}
+function goHome(){show('home');renderObras();}
+function newObra(){
+  const n=prompt('Nombre de la obra:');
+  if(!n?.trim()) return;
+  if(!db.obras.some(o=>o.nombre.toLowerCase()===n.trim().toLowerCase()))
+    db.obras.push({id:crypto.randomUUID(),nombre:n.trim(),visitas:[]});
+  saveDB(); renderObras();
+}
+function renderObras(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const arr=db.obras.filter(o=>o.nombre.toLowerCase().includes(q));
+  document.getElementById('obras').innerHTML=arr.length?arr.map(o=>`
+    <div class="card obra" onclick="openObra('${o.id}')"><div><h3>${esc(o.nombre)}</h3><div class="muted">${o.visitas.length} visita${o.visitas.length===1?'':'s'}</div></div><div>›</div></div>`).join('')
+    : '<div class="card muted">No hay obras todavía. Pulsa “+ Obra” para crear la primera.</div>';
+}
+function populateSelect(){
+  document.getElementById('obraSelect').value='';
+  document.getElementById('obraDetectada').textContent='Habla diciendo primero el nombre de la obra.';
+}
+function detectObra(text){
+  const t=text.toLowerCase();
+  let best=null, score=0;
+  for(const o of db.obras){
+    const name=o.nombre.toLowerCase().trim();
+    if(!name) continue;
+    let sc=t.includes(name)?100:0;
+    const words=name.split(/\\s+/).filter(w=>w.length>2);
+    sc += words.filter(w=>t.includes(w)).length*10;
+    if(sc>score){score=sc;best=o;}
+  }
+  if(best && score>=10){
+    document.getElementById('obraSelect').value=best.id;
+    document.getElementById('obraDetectada').innerHTML='🏗️ <strong>'+esc(best.nombre)+'</strong>';
+  } else {
+    document.getElementById('obraSelect').value='';
+    document.getElementById('obraDetectada').textContent='No he encontrado una obra. Di el nombre exacto al principio.';
+  }
+  return best;
+}
+function showNewVisit(){
+  if(!db.obras.length){alert('Primero crea una obra.');newObra();if(!db.obras.length)return;}
+  populateSelect();document.getElementById('texto').value='';show('visit');
+}
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('Este navegador no permite reconocimiento de voz. Prueba Chrome en Android.');return;}
+  if(listening){recognition.stop();return;}
+  recognition=new SR();recognition.lang='es-ES';recognition.continuous=true;recognition.interimResults=true;
+  let base=document.getElementById('texto').value.trim();
+  recognition.onresult=e=>{
+    let final='', interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t+' ';else interim+=t;}
+    document.getElementById('texto').value=(base?base+' ':'')+final+interim;
+    base=document.getElementById('texto').value.replace(interim,'').trim();
+    detectObra(document.getElementById('texto').value);
+  };
+  recognition.onstart=()=>{listening=true;document.getElementById('mic').textContent='⏹️ Parar de dictar';};
+  recognition.onend=()=>{listening=false;document.getElementById('mic').textContent='🎙️ Empezar a dictar';};
+  recognition.start();
+}
+function parse(text){
+  const clean=text.trim();
+  const date=new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const find=(patterns)=>{
+    for(const p of patterns){
+      const m=clean.match(new RegExp(p+'\\s*[:\\-]?\\s*([^\\.\\n]+)','i'));
+      if(m)return m[1].trim();
+    }
+    return '';
+  };
+  // Reconocimiento práctico por frases habituales del trabajo en obra.
+  const trabajo=find(['trabajo realizado','trabajo','hemos hecho','he hecho','hemos terminado','he terminado','hemos instalado','he instalado']);
+  const usado=find(['material usado','material utilizado','he usado','hemos usado','he gastado','hemos gastado']);
+  const pendiente=find(['material pendiente','hay que traer','falta','faltan','pendiente','me falta','nos falta']);
+  const proxima=find(['próxima visita','proxima visita','volver','volvemos','tengo que volver','hay que volver']);
+  return {resumen:clean,trabajo,materialUsado:usado,pendiente,proxima};
+}
+function saveVisit(){
+  const text=document.getElementById('texto').value.trim();
+  const detected=detectObra(text);
+  if(!text)return alert('Dicta o escribe algo antes de guardar.');
+  if(!detected)return alert('No he podido identificar la obra. Di el nombre de la obra al principio del dictado.');
+  detected.visitas.unshift({id:crypto.randomUUID(),fecha:new Date().toISOString(),...parse(text)});
+  saveDB();openObra(detected.id);
+}
+function openObra(id){
+  const o=db.obras.find(x=>x.id===id);if(!o)return;
+  document.getElementById('detailContent').innerHTML=`
+    <div class="card"><h2>${esc(o.nombre)}</h2><div class="muted">${o.visitas.length} visita${o.visitas.length===1?'':'s'}</div></div>
+    ${o.visitas.map(v=>`<div class="card visit">
+      <div class="muted">${new Date(v.fecha).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>
+      ${v.trabajo?`<b>🔨 Trabajo</b><div>${esc(v.trabajo)}</div>`:''}
+      ${v.materialUsado?`<b>📦 Material usado</b><div>${esc(v.materialUsado)}</div>`:''}
+      ${v.pendiente?`<b>⚠️ Pendiente</b><div>${esc(v.pendiente)}</div>`:''}
+      ${v.proxima?`<b>📅 Próxima visita</b><div>${esc(v.proxima)}</div>`:''}
+      <b>📝 Dictado</b><div>${esc(v.resumen)}</div>
+    </div>`).join('') || '<div class="card muted">Todavía no hay visitas.</div>'}
+    <button class="danger" onclick="deleteObra('${o.id}')">Eliminar obra</button>`;
+  show('detail');
+}
+function deleteObra(id){
+  const o=db.obras.find(x=>x.id===id);if(confirm('¿Eliminar la obra y todo su historial?')){db.obras=db.obras.filter(x=>x.id!==id);saveDB();goHome();}
+}
+renderObras();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
